@@ -1,0 +1,79 @@
+const int pirPin1 = 2;    // PIR sensor 1 pin
+const int pirPin2 = 4;    // PIR sensor 2 pin
+const uint8_t BTN_PIN = 3; // button pin
+
+// Set the button previous state to low
+uint8_t buttonPrevState = LOW;
+
+volatile boolean pirState1 = false;    // PIR sensor 1 state (motion detected or not)
+volatile boolean pirState2 = false;    // PIR sensor 2 state (motion detected or not)
+volatile unsigned long pirTime1 = 0;   // Time of last PIR sensor 1 trigger
+volatile unsigned long pirTime2 = 0;   // Time of last PIR sensor 2 trigger
+
+void setup() {
+  pinMode(13, OUTPUT);
+  pinMode(pirPin1, INPUT);   // Set PIR sensor 1 pin as input
+  pinMode(pirPin2, INPUT);   // Set PIR sensor 2 pin as input
+  pinMode(BTN_PIN, INPUT);
+  PCICR |= (1 << PCIE2);   // Enable pin change interrupt for PCINT18-23 (corresponding to PIR sensor 1 and 2 pins)
+  PCMSK2 |= (1 << PCINT18) | (1 << PCINT20);   // Enable pin change interrupt for PIR sensor 1 and 2 pins
+  attachInterrupt(digitalPinToInterrupt(BTN_PIN), buttonDetected, CHANGE);   // Attach interrupt on changing edge of button output
+  Serial.begin(9600);    // Start serial communication for debugging
+}
+
+void loop() {
+  // Print PIR sensor states and times of last trigger
+  Serial.print("PIR sensor 1 state: ");
+  Serial.println(pirState1);
+  Serial.print("Time of last trigger (PIR sensor 1): ");
+  Serial.println(pirTime1);
+  Serial.print("PIR sensor 2 state: ");
+  Serial.println(pirState2);
+  Serial.print("Time of last trigger (PIR sensor 2): ");
+  Serial.println(pirTime2);
+
+  delay(1000);   // Wait 1 second before printing again
+}
+
+ISR(PCINT2_vect) {
+  // Check if PIR sensor 1 or 2 triggered the interrupt and update the corresponding state and trigger time
+  if (digitalRead(pirPin1))
+  {
+    pirState1 = true;
+    pirTime1 = millis();
+    digitalWrite(13, HIGH);   // Turn on LED for PIR sensor 1
+  }
+  else
+  {
+    pirState1 = false;
+    digitalWrite(13, LOW);   // Turn off LED for PIR sensor 1
+  }
+  
+  if (digitalRead(pirPin2))
+  {
+    pirState2 = true;
+    pirTime2 = millis();
+    digitalWrite(12, HIGH);   // Turn on LED for PIR sensor 2
+    delay(1000);
+  }
+  else
+  {
+    pirState2 = false;
+    digitalWrite(12, LOW);   // Turn off LED for PIR sensor 2
+  }
+}
+
+void buttonDetected()
+{
+  if (buttonPrevState)
+  {
+    buttonPrevState = false;
+    digitalWrite(13, LOW);
+  }
+  else
+  {
+    buttonPrevState = true;
+    digitalWrite(13, HIGH);
+    Serial.println("Button Detected");
+  }
+}
